@@ -1,0 +1,34 @@
+# Example service configuration (sanitized).
+# Every service on the platform is configured with a file shaped like this.
+# Real configs live outside version control; secrets come from the environment.
+
+service:
+  name: example-paper-trader
+  status_port: 8120          # local /status HTTP endpoint
+  journal_path: journal/trades.jsonl
+  state_db: state/service.db
+
+data:
+  provider: alpaca            # alpaca | ibkr | ccxt | chainlink-ws
+  symbols: [QQQ, SPY]
+  bar_interval: 5min
+  stale_data_seconds: 120     # degrade to no-trade mode past this
+
+execution:
+  mode: paper                 # paper | live (live requires explicit promotion)
+  max_position_usd: 1000
+  max_open_positions: 2
+
+risk:
+  circuit_breaker:
+    max_consecutive_errors: 5
+    max_daily_drawdown_pct: 3.0
+    action: flatten_and_halt
+
+alerts:
+  telegram_channel: trading   # routing key; token/chat id from environment
+  heartbeat_minutes: 60
+
+# Secrets — NEVER in this file. Injected via environment:
+#   ALPACA_API_KEY / ALPACA_API_SECRET
+#   TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID
