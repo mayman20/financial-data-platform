@@ -22,7 +22,7 @@ python -m pip install numpy pandas scipy
 python shared/backtest_validation.py
 ```
 
-The module's built-in example generates synthetic return series and prints statistical summaries. It makes no network requests or trades. This is a smoke test of the example, not evidence of strategy profitability or a comprehensive test suite.
+The module's built-in example generates synthetic return series and prints statistical summaries. It makes no network requests or trades. A printed `[FAIL]` is a synthetic candidate failing the statistical gates, not a program error. This is a smoke test of the example, not evidence of strategy profitability or a comprehensive test suite.
 
 ## Engineering decisions
 
