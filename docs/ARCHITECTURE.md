@@ -1,49 +1,39 @@
 # Architecture
 
-## Service model
+These notes describe historical design patterns from the broader private platform. The public repository contains the validation module and documentation, not the services themselves. Deployment topology and operational status are not asserted here.
 
-Every long-running component is an independent systemd unit on a Linux VM (GCP e2 instances historically; AWS Lightsail currently). There is no orchestration layer — services are deliberately small, single-purpose Python daemons that share a common operational contract:
+## Service boundaries
 
-1. **A local HTTP status endpoint.** Each service exposes `/status` on its own port, returning JSON: uptime, last event processed, open positions, error counts. A single runbook can curl every service on a box and know the fleet's health in seconds.
-2. **A journal.** Every decision — signal, order, fill, skip, error — is appended to a JSONL journal before it takes effect. On restart, a service replays its journal to rebuild in-memory state, so crashes and reboots don't produce duplicate orders or orphaned positions.
-3. **A circuit breaker.** Consecutive-error and drawdown thresholds trip the breaker, which flattens exposure where applicable and alerts, rather than letting a degraded service keep trading.
-4. **Telegram alerting.** All services route notifications through a shared alerting module with per-channel routing (trade fills, system health, research digests are separate channels), so a phone is the pager.
+The system used small Python services on Linux VMs, including GCP and AWS Lightsail deployments at different stages. Ingestion, research, and paper execution were separate responsibilities.
 
-## Data ingestion
+Useful operational patterns included:
 
-Ingestion services are per-source adapters that normalize into a common event shape before persistence:
+- HTTP status endpoints for uptime, last processed events, and errors.
+- Append-only JSONL decision journals for diagnosis and restart reconciliation.
+- Error thresholds and circuit breakers to limit continued operation during failures.
+- Telegram alerts for service health and research events.
 
-- **IBKR** — historical bars and live account/news data via the native API
-- **Alpaca** — equities/ETF market data and paper-trade execution
-- **ccxt** — crypto exchange data (funding rates, perpetuals OHLCV)
-- **Chainlink over WebSocket** — sub-second on-chain price feed ticks
-- **REST pollers** — weather (NOAA METAR/GEFS), macro calendars, news RSS
+These are architectural patterns, not a guarantee that every historical service implemented every protection. Journaling alone does not guarantee exactly-once execution; broker state and local state still require reconciliation.
 
-Adapters are rate-limit aware and reconnect with backoff; a dropped WebSocket or a 429 degrades a service to stale-data mode (flagged in `/status`) instead of crashing it.
+## Data sources
 
-## Storage
+Historical adapters covered IBKR, Alpaca, ccxt-connected exchanges, Chainlink feeds, and REST sources such as weather and news. They are not shipped in this repository. Rate limits, reconnect behavior, data freshness, and source licensing must be handled by each integration.
 
-| Data | Store | Why |
+## Storage choices
+
+| Data | Store | Purpose |
 |---|---|---|
-| Decision/event journals | JSONL (append-only) | crash-safe replay, greppable forensics |
-| Research/backtest datasets | Parquet | columnar scans over years of bars |
-| Service state, small datasets | SQLite / PostgreSQL | transactional reads/writes per service |
-| Fleet status | YAML-frontmatter markdown | human- and dashboard-readable at once |
+| Decision and event journals | JSONL | Append-only records for inspection and reconciliation |
+| Research datasets | Parquet | Columnar scans and cached historical data |
+| Structured service state | SQLite / PostgreSQL | Transactional records |
+| Operational summaries | Markdown / YAML | Human-readable status and configuration |
 
-## Research → production pipeline
+## Research workflow
 
-Strategies move through fixed stages, each with a gate:
-
-```
-idea → offline backtest → validation gates → paper deployment → (rarely) capital
+```text
+idea → offline experiment → statistical checks → forward paper validation
 ```
 
-- The **validation gates** are statistical (see [VALIDATION.md](VALIDATION.md)) and pre-registered: the kill criteria and decision date are written down before the paper deployment starts, so a marginal strategy can't linger on hope.
-- **Paper deployments** run on the same code path as live execution — same adapters, same journals, same breakers — so promotion is a config change, not a rewrite.
-- Most candidates die at the gates. That is the intended behavior: the platform's job is to make killing a bad idea cost one config file, not a funded account.
+Offline results can reject weak candidates; passing a statistical check does not establish executable performance. Forward validation must separately address fills, costs, stale data, and state recovery. Historical strategy backtests are not presented here as current paper-trading outcomes.
 
-## Deployment & ops
-
-- Plain `systemd` units + cron, deployed over SSH with small scripts. No containers — single-owner VMs made simple tooling the right trade.
-- Health checks run on cron and alert on dead services, stale journals, disk pressure, and clock drift.
-- Every VM has an identical runbook: status endpoints, journal tails, and unit states, so any box can be diagnosed in one pass.
+See [Validation Methodology](VALIDATION.md) for the functions actually included in the public sample and their limitations. Production deployment and any use of capital are outside this repository.
