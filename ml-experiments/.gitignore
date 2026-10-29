@@ -1,0 +1,48 @@
+# Downloaded third-party data (fetch with download_data.py; do not commit)
+*.csv
+*.tsv
+*.txt
+*.zip
+data/
+**/DATA_PROVENANCE.json
+
+# Learned weights and run outputs
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.pt
+*.pth
+*.joblib
+runs/
+outputs/
+artifacts/
+checkpoints/
+
+# Only the committed JSON summaries and pins stay tracked
+*.json
+!/DATA_SOURCES.json
+!/RESULTS_SUMMARY.json
+!/news_price/iterations/VALIDATION_CONTEXT.json
+
+# Environments, secrets, logs, caches
+.venv/
+venv/
+env/
+.env
+.env.*
+*.pem
+*.key
+*.log
+logs/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store
+
+# Default output folders created by the documented commands
+**/sentiment_run/
+**/price_run/
+**/iterate_run/
+**/run[0-9]*/

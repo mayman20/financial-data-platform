@@ -1,0 +1,38 @@
+{
+  "sentiment": {
+    "url": "https://huggingface.co/datasets/takala/financial_phrasebank/resolve/8d3fe0c36d5feec6b3cc5e455b0fcb4820fb9964/data/FinancialPhraseBank-v1.0.zip",
+    "archive_sha256": "0e1a06c4900fdae46091d031068601e3773ba067c7cecb5b0da1dcba5ce989a6",
+    "member": "FinancialPhraseBank-v1.0/Sentences_AllAgree.txt",
+    "raw_sha256": "5fb370b3005b9a2759f708849a691ad2e4d2593d4c995c1afde229398a516594",
+    "filename": "sentences_allagree.txt",
+    "license": "CC BY-NC-SA 3.0; educational experiment only, not integrated into commercial/live bot",
+    "source": "https://huggingface.co/datasets/takala/financial_phrasebank"
+  },
+  "news_price": {
+    "revision": "4054842ec476953b30ee874d4b7e8eea786a21fa",
+    "source": "https://github.com/Zdong104/FNSPID_Financial_News_Dataset",
+    "files": {
+      "aapl_headlines.csv": {
+        "url": "https://raw.githubusercontent.com/Zdong104/FNSPID_Financial_News_Dataset/4054842ec476953b30ee874d4b7e8eea786a21fa/data_scraper/headline%20scraper/headlines/aapl.csv",
+        "sha256": "1b6751cf6e12f4707ebe4ff31cedd473f8dc1c0efbcc662507c5afda066759f7",
+        "bytes": 159706
+      },
+      "aapl_prices.csv": {
+        "url": "https://raw.githubusercontent.com/Zdong104/FNSPID_Financial_News_Dataset/4054842ec476953b30ee874d4b7e8eea786a21fa/data_processor/stock_price_data_raw/aapl.csv",
+        "sha256": "26fe1719554cefa6fc0dcefe85d8d4d57d6763867e60a8c09781ab05954662db",
+        "bytes": 1242080
+      },
+      "aa_headlines.csv": {
+        "url": "https://raw.githubusercontent.com/Zdong104/FNSPID_Financial_News_Dataset/4054842ec476953b30ee874d4b7e8eea786a21fa/data_scraper/headline%20scraper/headlines/aa.csv",
+        "sha256": "b75603bd6d9e5d932146a3b246c2e0f2ffaa249d92d4932795fab695f6a1d8d7",
+        "bytes": 435869
+      },
+      "aa_prices.csv": {
+        "url": "https://raw.githubusercontent.com/Zdong104/FNSPID_Financial_News_Dataset/4054842ec476953b30ee874d4b7e8eea786a21fa/data_processor/stock_price_data_raw/aa.csv",
+        "sha256": "50725eb03d9daf850da70a8cbbb3ce4d8eba88f46b089ea7575cc2ee5d7d84dd",
+        "bytes": 1509616
+      }
+    },
+    "license_note": "FNSPID release/footer statements differ; educational local experiment, no commercial deployment"
+  }
+}

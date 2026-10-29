@@ -1,0 +1,47 @@
+{
+  "scope": "AI-assisted educational experiments Oct29; local NumPy, not cloud deployment",
+  "sentiment": {
+    "rows": 2259,
+    "split": [
+      1581,
+      339,
+      339
+    ],
+    "holdout_accuracy": 0.8790560471976401,
+    "macro_f1": 0.8242373812505129,
+    "limitations": [
+      "One random sentence split; dates/story independence unknown",
+      "Not a return prediction model"
+    ]
+  },
+  "price_outcome": {
+    "groups": 1027,
+    "split": [
+      718,
+      154,
+      155
+    ],
+    "holdout_accuracy": 0.45161290322580644,
+    "majority_holdout_accuracy": 0.4838709677419355,
+    "limitations": [
+      "Retrospective date-only alignment, not point-in-time verified",
+      "Issuer continuity and headline relevance unverified",
+      "No causal, trading or profit claim"
+    ]
+  },
+  "validation_iterations": {
+    "test_evaluations": 0,
+    "original_mlp_accuracy": 0.5064935064935064,
+    "linear_accuracy": 0.5194805194805194,
+    "bigram_accuracy": 0.525974025974026,
+    "balanced_accuracy": 0.44805194805194803,
+    "selection": "validation macro-F1, selected bigram; exploratory only"
+  },
+  "longer_training": {
+    "epochs": 100,
+    "best_epoch": 8,
+    "best_validation_ce": 0.855882838638978,
+    "final_validation_ce": 2.1662046327297735,
+    "note": "More epochs overfit in this run"
+  }
+}

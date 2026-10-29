@@ -1,0 +1,258 @@
+{
+  "settings": {
+    "labels": [
+      "DOWN",
+      "FLAT",
+      "UP"
+    ],
+    "neutral_band": 0.0025,
+    "return": "(Close - Open) / Open of the entry row",
+    "alignment": "first price date strictly greater than headline date",
+    "max_gap_calendar_days": 7,
+    "grouping": "one sample per entry date",
+    "dedup": "case/whitespace-normalised exact headline; earliest (date, file row) kept globally",
+    "split": "chronological by unique entry date; train floor(70%), val floor(15%), test rest",
+    "max_features": 800,
+    "min_df": 2,
+    "hidden": 16,
+    "lr": 0.003,
+    "l2": 0.0001,
+    "batch_size": 64,
+    "max_epochs": 30,
+    "patience": 5,
+    "seed": 42,
+    "nb_alpha": 1.0,
+    "selection": "MLP epoch with lowest validation CE; test evaluated once afterwards",
+    "min_groups": 100,
+    "min_val_test_groups": 10
+  },
+  "baseline_validation": {
+    "majority_train": {
+      "accuracy": 0.525974025974026,
+      "macro_f1": 0.2297872340425532,
+      "per_class": {
+        "DOWN": {
+          "precision": 0.525974025974026,
+          "recall": 1.0,
+          "f1": 0.6893617021276596,
+          "support": 81
+        },
+        "FLAT": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 5
+        },
+        "UP": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 68
+        }
+      },
+      "confusion_rows_true_cols_pred": [
+        [
+          81,
+          0,
+          0
+        ],
+        [
+          5,
+          0,
+          0
+        ],
+        [
+          68,
+          0,
+          0
+        ]
+      ],
+      "label_order": [
+        "DOWN",
+        "FLAT",
+        "UP"
+      ],
+      "classes_without_support": [],
+      "cross_entropy": 0.8627181430386767
+    },
+    "naive_bayes": {
+      "accuracy": 0.512987012987013,
+      "macro_f1": 0.34357796814742847,
+      "per_class": {
+        "DOWN": {
+          "precision": 0.5849056603773585,
+          "recall": 0.38271604938271603,
+          "f1": 0.46268656716417905,
+          "support": 81
+        },
+        "FLAT": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 5
+        },
+        "UP": {
+          "precision": 0.4752475247524752,
+          "recall": 0.7058823529411765,
+          "f1": 0.5680473372781064,
+          "support": 68
+        }
+      },
+      "confusion_rows_true_cols_pred": [
+        [
+          31,
+          0,
+          50
+        ],
+        [
+          2,
+          0,
+          3
+        ],
+        [
+          20,
+          0,
+          48
+        ]
+      ],
+      "label_order": [
+        "DOWN",
+        "FLAT",
+        "UP"
+      ],
+      "classes_without_support": [],
+      "cross_entropy": 0.8346980194006745
+    },
+    "mlp": {
+      "accuracy": 0.5064935064935064,
+      "macro_f1": 0.3412002105632567,
+      "per_class": {
+        "DOWN": {
+          "precision": 0.5689655172413793,
+          "recall": 0.4074074074074074,
+          "f1": 0.4748201438848921,
+          "support": 81
+        },
+        "FLAT": {
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0,
+          "support": 5
+        },
+        "UP": {
+          "precision": 0.46875,
+          "recall": 0.6617647058823529,
+          "f1": 0.5487804878048781,
+          "support": 68
+        }
+      },
+      "confusion_rows_true_cols_pred": [
+        [
+          33,
+          0,
+          48
+        ],
+        [
+          2,
+          0,
+          3
+        ],
+        [
+          23,
+          0,
+          45
+        ]
+      ],
+      "label_order": [
+        "DOWN",
+        "FLAT",
+        "UP"
+      ],
+      "classes_without_support": [],
+      "cross_entropy": 0.862403332324194
+    }
+  },
+  "split": {
+    "train": {
+      "groups": 718,
+      "headlines": 1360,
+      "entry_dates": [
+        "2014-04-10",
+        "2021-05-28"
+      ],
+      "news_dates": [
+        "2014-04-09",
+        "2021-05-27"
+      ],
+      "labels": {
+        "DOWN": 317,
+        "FLAT": 86,
+        "UP": 315
+      }
+    },
+    "val": {
+      "groups": 154,
+      "headlines": 307,
+      "entry_dates": [
+        "2021-06-01",
+        "2022-07-29"
+      ],
+      "news_dates": [
+        "2021-05-28",
+        "2022-07-28"
+      ],
+      "labels": {
+        "DOWN": 81,
+        "FLAT": 5,
+        "UP": 68
+      }
+    },
+    "test": {
+      "groups": 155,
+      "headlines": 251,
+      "entry_dates": [
+        "2022-08-04",
+        "2024-01-18"
+      ],
+      "news_dates": [
+        "2022-08-03",
+        "2024-01-17"
+      ],
+      "labels": {
+        "DOWN": 75,
+        "FLAT": 9,
+        "UP": 71
+      }
+    }
+  },
+  "counters": {
+    "headlines": {
+      "rows": 2593,
+      "kept_absolute_dated": 2593,
+      "relative_date_rejected": 0,
+      "unknown_date_rejected": 0,
+      "empty_headline_rejected": 0,
+      "absolute_date_range": [
+        "2014-04-09",
+        "2024-01-17"
+      ]
+    },
+    "duplicate_headlines_removed": 675,
+    "alignment": {
+      "aligned_headlines": 1918,
+      "no_future_price_excluded": 0,
+      "gap_too_large_excluded": 0,
+      "entry_date_groups": 1027
+    },
+    "prices": {
+      "rows": 13642,
+      "unique_dates": 13642,
+      "identical_duplicate_rows_dropped": 0,
+      "date_range": [
+        "1970-01-02",
+        "2024-02-02"
+      ]
+    }
+  },
+  "test_policy": "Previous first-run test already inspected by owner. No new candidate may vectorize/evaluate test; model iteration selection validation only. No new generalization claim."
+}
