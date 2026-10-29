@@ -4,7 +4,9 @@ These notes describe historical design patterns from the broader private platfor
 
 ## Service boundaries
 
-The system used small Python services on Linux VMs, including GCP and AWS Lightsail deployments at different stages. Ingestion, research, and paper execution were separate responsibilities.
+The system used small Python services on Linux VMs. Ingestion, research, and paper execution were separate responsibilities.
+
+Cloud history, stated narrowly: the news/sentiment collector historically ran on a GCP Compute Engine VM with a weekday daily cron job, and that instance has since been deleted. AWS Lightsail was used for separate experiments; these notes do not claim the news service moved there, and nothing here shows a currently running deployment. The private news code had a lexicon/rules baseline plus optional Claude and FinBERT inference paths; which scorer the deployed version actually used is not recorded. The [ML experiments](../ml-experiments/) are separate. They were trained locally with NumPy, not on cloud infrastructure.
 
 Useful operational patterns included:
 
