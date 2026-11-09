@@ -41,13 +41,15 @@ Optional RSS downloads are user-triggered, transient provider content. They are
 not included in the demo, tested with live requests, bundled or automatically
 published. Public availability does not imply unrestricted redistribution.
 
-A new synthetic positive-control generator, `planted_inputs`, adds conditional
-±10 bp effects after prior-day headlines with independent 60 bp noise. Its
-5,200-session design, seed 43, 5 bp costs and five-session demo reset policy
-were fixed before evaluation. Primary detection failed; neither the effect nor
-seed was changed to force a pass. `scripts/detection_power.py` records the
-all-gate results of predeclared seeds 100–119 in the bundled JSON ledger.
-These synthetic records contain no private performance data.
+The public synthetic generator `planted_inputs` accepts a conditional effect in
+basis points. The report's predeclared grid is 0, 5, 10, 20 and 40 bp, with the
+same 60 bp innovations, 5,200 sessions, 5 bp costs, five-session guard reset policy,
+seeds 100–119 and gates for every row. Headlines and innovations are paired across
+effects. `scripts/detection_power.py` precomputes all 100 outcomes in the bundled
+JSON ledger, which the report validates before displaying counts. Zero effect
+is labeled the false-positive rate. The primary-seed chart is fixed at seed 43
+and 20 bp, regardless of outcome; it is illustrative rather than the result.
+No private research records or external data enter this experiment.
 
 ## Preserved experiments and private boundaries
 

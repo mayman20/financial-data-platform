@@ -50,9 +50,13 @@ initial equity. These corrections do not change the legacy file described above.
 The demo does not use the legacy walk-forward, regime or slippage helpers.
 
 `fdp demo` applies these gates to the planted and noise sentiment cases only.
-The rebalancer reports allocation diagnostics instead. The fixed planted signal
-need not pass on every seed: the report discloses its effect, costs, primary-seed
-failure and empirical detection frequency across predeclared seeds 100–119.
+The rebalancer reports allocation diagnostics instead. The report compares the predeclared effects 0, 5, 10, 20 and 40 bp with identical
+60 bp noise, 5,200 sessions, 5 bp costs, guard rules, seeds 100–119 and gates.
+The zero-effect count is empirical false-positive frequency, not detection power.
+All other counts estimate detection power with only 20 runs per effect.
+The seed-43 / 20 bp equity chart is illustrative, not a substitute for the table.
+The bundled ledger is reproducible using `python scripts/detection_power.py`;
+all 100 outcomes remain visible, with no selection of a winning seed or effect.
 
 `fdp demo` prints and publishes synthetic gate outcomes; a failed gate is a
 research rejection, not a build failure. Seeded positive/negative controls test
