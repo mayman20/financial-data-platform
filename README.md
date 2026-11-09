@@ -1,13 +1,27 @@
 # Financial Data Platform
 
-An installable Python research pipeline: ingest local market-shaped data, store
-it in SQLite, exercise synthetic signal detection and allocation, and build a static
-report. The default demo is deterministic and entirely offline, using bundled
-noise fixtures and a seeded planted-signal generator. It has no broker or account integration.
+[![CI](https://github.com/mayman20/financial-data-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/mayman20/financial-data-platform/actions/workflows/ci.yml)
+
+This is a Python research pipeline. It ingests market-shaped data, stores it in SQLite and runs research flows. Every result must clear statistical validation gates before it reaches the report. The gates are the point: they reject strategies that only look good by chance.
+
+**[Open the demo report](https://mayman20.github.io/demos/financial-data-platform/)**. It uses synthetic data and is rebuilt offline by `fdp demo`.
+
+## What the demo shows
+
+| Case | Result |
+|---|---|
+| Pure noise (no edge) | Passed 0 of 20 runs, a 0% false-positive rate |
+| 5 bp planted edge | Detected in 0 of 20 runs |
+| 10 bp planted edge | Detected in 12 of 20 runs |
+| 20 bp planted edge | Detected in 20 of 20 runs |
+| 40 bp planted edge | Detected in 20 of 20 runs |
+| 50/40/10 rebalancer | Stays within 2.43 percentage points of target weights |
+
+Every row uses the same 20 predeclared seeds, 5,200 synthetic sessions, 60 bp of daily noise and a 5 bp cost per exposure change. A run counts as detected only if it passes all four gates. The data is synthetic, so this measures the software and the statistics, not a real strategy.
 
 ## Quickstart
 
-Python 3.11+; from a clone of this repository, run these three commands:
+You need Python 3.11 or newer.
 
 ```sh
 python3 -m venv .venv
@@ -15,76 +29,55 @@ python3 -m venv .venv
 .venv/bin/fdp demo
 ```
 
-After installation, **`fdp demo` is the single command** that runs the full pipeline
-when the environment is active. Open `site/index.html` directly in a browser.
-Use `fdp demo --output another-folder` to select a different output directory.
+The demo takes about 7 seconds, runs offline and writes `site/index.html`.
 
-## Demo output
+## How it works
 
-- Bundled inputs: 780 price rows over three fictional assets and 260 headlines,
-  generated independently with seed 42. No downloads or trained weights.
-- SQLite input snapshot, read back before research runs.
-- Monthly 50/40/10 rebalancer with fractional holdings and funded transaction costs.
-- Lexicon sentiment → delayed long/cash exposure, with a session loss circuit breaker.
-- A fixed planted-signal case: conditional ±10 bp, independent 60 bp noise, 5,200
-  sessions and 5 bp exposure-change costs. It is a detection experiment, not a forecast.
-  A reproducible 20-seed ledger reports detection frequency; seed 43 is not detected.
-- Demo guards explicitly reset every five observed sessions; orange chart spans label
-  paused cash exposure. The library retains its explicit-reset default.
-- Four validation gates per sentiment case: positive return, sign randomization, deflated
-  Sharpe and bootstrap downside. **FAIL is expected research output**, not a
-  pipeline error or a claim about real markets.
-- `site/index.html`, `equity.png`, `allocation.png`, `summary.json`,
-  `rebalancer.csv`, `sentiment.csv`, `planted.csv`, and two SQLite snapshots.
-  `allocation.png` shows actual versus target weights and drift; `equity.png`
-  shows the two sentiment cases. Output is ignored by Git.
+```
+ingestion → SQLite → research flows → validation gates → static report
+```
 
-The [Pages workflow](.github/workflows/pages.yml) builds the same synthetic report
-on pushes to `main`. Deployment uses GitHub Actions as the Pages source. No live deployment is asserted here.
+- **Ingestion.** An RSS news parser handles normalization and deterministic deduplication. Live fetching is a separate command you have to opt into: `fdp fetch-news SPY --allow-network`. The demo and tests never use it.
+- **Storage.** SQLite snapshots are written atomically and read back before research runs.
+- **Research flows.**
+  - A monthly 50/40/10 rebalancer with fractional holdings and transaction costs.
+  - A sentiment flow: a lexicon score drives next-session long/cash exposure, with a loss circuit breaker.
+- **Validation gates.** A strategy must pass all four:
+  - positive total return,
+  - a sign-randomization test (p < 0.05),
+  - a deflated Sharpe ratio test that accounts for the number of trials,
+  - a bootstrap check that the 5th-percentile terminal equity stays above 0.80.
+- **Report.** Static HTML with PNG charts. No JavaScript or CDN.
 
-The rebalancer is evaluated by allocation weights, maximum drift, turnover and costs,
-not profitability gates. Its returns remain synthetic. Regenerate the fixed power
-ledger with `.venv/bin/python scripts/detection_power.py`; no parameter search runs.
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) has the module diagram and contracts. [docs/PROVENANCE.md](docs/PROVENANCE.md) lists which modules were adapted from my private research code and what was removed for this public version. To regenerate the detection-rate table, run `.venv/bin/python scripts/detection_power.py`.
 
-## Architecture
-
-`ingestion → SQLite → rebalancer + sentiment/price → validation → HTML/PNG`
-
-The package lives in [`src/fdp/`](src/fdp/). The CLI orchestrates small modules;
-network access is confined to a separate public no-key RSS command with explicit
-opt-in (`fdp fetch-news SPY --allow-network`). That command is never part of the
-demo or a live test and its content is not automatically published.
-
-See [architecture](docs/ARCHITECTURE.md) for the module diagram and contracts, and
-[provenance](docs/PROVENANCE.md) for each sanitized source adaptation.
-The original [validation module](shared/backtest_validation.py) and
-[methodology notes](docs/VALIDATION.md) keep their existing paths.
-
-## Checks
+## Tests
 
 ```sh
 .venv/bin/ruff check .
 .venv/bin/pytest -q
 ```
 
-Tests are offline and deterministic, including existing ML regression suites in
-isolated subprocesses. They cover parsing failures, deduplication, atomic storage,
-rebalancer math, fees, signal timing, breaker transitions, statistical controls,
-fixture reproduction, the CLI and report artifacts. Ruff covers the new package,
-tests and scripts; the preserved legacy modules retain their original formatting.
-CI repeats lint, tests and the demo on Python 3.11 and 3.12.
+There are 85 offline, deterministic tests. They cover:
+- parsing failures and deduplication,
+- atomic storage,
+- rebalancer math and fees,
+- signal timing and circuit-breaker transitions,
+- the statistical controls,
+- the CLI and report output.
 
-## Scope and limits
+CI runs lint, tests and the demo on Python 3.11 and 3.12. A deterministic scan, `scripts/sanitize.py`, checks the tree and the commit history for secrets and personal data.
 
-Synthetic output demonstrates code behavior, not strategy validity or profitability.
-Costs, fractional fills and calendar handling are simplified; there is no capital,
-broker execution, deployment monitoring or private performance data here. The
-unchanged [ML experiments](ml-experiments/) have their own honest metrics,
-reproduction commands and limitations; they do not power this demo. Their datasets
-are separate downloads with separate terms. Optional public RSS availability and
-reuse rights belong to its provider. Code is [MIT licensed](LICENSE).
+## ML experiments
 
-## AI assistance
+[`ml-experiments/`](ml-experiments/) holds two small NumPy text-classification experiments. A sentence-sentiment classifier reached 87.9% test accuracy on Financial PhraseBank. Predicting a later price move from headlines scored 45.2%, below its 48.4% baseline, and that result is reported as is.
 
-Claude and ChatGPT assisted with implementation, review and documentation,
-including the separate ML experiments.
+## Scope
+
+- There is no broker connection, live capital or private performance data here.
+- Costs, fills and calendars are simplified.
+- The optional RSS source keeps its provider's terms.
+
+## License and AI use
+
+The code is [MIT licensed](LICENSE). I used Claude and ChatGPT to help with implementation, review and documentation.

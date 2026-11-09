@@ -1,7 +1,6 @@
 name: Build and deploy synthetic demo
 on:
-  push:
-    branches: [main]
+  # Manual until GitHub Pages is enabled for this repository.
   workflow_dispatch:
 permissions:
   contents: read
