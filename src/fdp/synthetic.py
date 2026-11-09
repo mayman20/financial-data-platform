@@ -59,19 +59,23 @@ def generate_fixtures(folder: Path, seed: int = 42) -> None:
     )
 
 
-def planted_inputs(seed: int = 43, periods: int = 5200) -> tuple[str, bytes, dict]:
-    """Fixed positive-control design: conditional ±10 bps, innovation SD 60 bps.
+def planted_inputs(
+    seed: int = 43, periods: int = 5200, *, effect_bps: float = 10
+) -> tuple[str, bytes, dict]:
+    """Synthetic control with a specified conditional effect; innovation SD 60 bps.
 
-    Parameters fixed before evaluating detection. Twenty synthetic years provide
-    power without increasing effect size. No relation to real asset forecasts.
+    The report uses a predeclared effect grid with paired innovations and headlines.
+    This is a detection experiment, not a real asset forecast.
     """
+    if not np.isfinite(effect_bps) or effect_bps < 0:
+        raise ValueError("Effect must be finite and nonnegative")
     rng = np.random.default_rng(seed)
     dates = pd.bdate_range("2004-01-02", periods=periods)
     signs = rng.choice([-1, 1], size=periods)
     by_day = {date.date(): sign for date, sign in zip(dates, signs, strict=True)}
     # A headline on t-1 determines exposure at close t and affects t -> t+1.
     decision = np.array([by_day.get(date.date() - timedelta(days=1), 0) for date in dates])
-    effect = np.r_[0, decision[:-1]] * 0.001
+    effect = np.r_[0, decision[:-1]] * (effect_bps / 10_000)
     innovations = rng.normal(0, 0.006, periods)
     closes = 100 * np.cumprod(1 + innovations + effect)
     prices = pd.DataFrame({"date": dates.strftime("%Y-%m-%d"), "symbol": "EQ", "close": closes})
@@ -89,11 +93,11 @@ def planted_inputs(seed: int = 43, periods: int = 5200) -> tuple[str, bytes, dic
         "kind": "synthetic planted signal",
         "seed": seed,
         "sessions": periods,
-        "conditional_effect_bps": 10,
+        "conditional_effect_bps": effect_bps,
         "innovation_sd_bps": 60,
         "cost_bps_per_exposure_change": 5,
         "demo_guard_reset_sessions": 5,
         "timing": "prior-day headline -> decision close -> following interval",
-        "design": "fixed before detection evaluation; no effect-size search",
+        "design": "predeclared effect grid; paired noise and headlines, no winning-seed selection",
     }
     return prices.to_csv(index=False), ET.tostring(rss, encoding="utf-8"), manifest

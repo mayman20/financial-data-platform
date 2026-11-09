@@ -21,7 +21,7 @@ def demo(output: Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
     write_snapshot(output / "research.sqlite", prices, news)
     prices, news = read_snapshot(output / "research.sqlite")
-    csv, rss, planted_manifest = planted_inputs()
+    csv, rss, planted_manifest = planted_inputs(effect_bps=20)
     planted_prices, planted_news = parse_prices(csv), parse_rss(rss, "EQ", "planted")
     write_snapshot(output / "planted.sqlite", planted_prices, planted_news)
     planted_prices, planted_news = read_snapshot(output / "planted.sqlite")

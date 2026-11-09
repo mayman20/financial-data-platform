@@ -61,11 +61,14 @@ def test_end_to_end_report_and_repeated_run(tmp_path):
     before = (tmp_path / "summary.json").read_bytes()
     summary = json.loads(before)
     assert summary["rows"] == {"prices": 780, "news": 260}
-    assert summary["summary"]["Pure noise"] == "rejected"
-    assert "12/20" in summary["summary"]["Planted signal"]
-    assert "seed 43 not detected" in page
+    assert [row["effect_bps"] for row in summary["detection_rates"]] == [0, 5, 10, 20, 40]
+    assert summary["detection_rates"][0]["kind"] == "false-positive rate"
+    assert summary["detection_rates"][2]["detected"] == 12
+    assert "Illustrative only" not in summary["summary"]
+    assert "primary seed 43 at 20 bp" in page
+    assert "the experiment's result" in page
     assert "Rebalancer" not in summary["validation"]
-    assert page.index('aria-label="Demo summary"') < page.index("All results are synthetic")
+    assert page.index('aria-label="Detection rates"') < page.index("All results are synthetic")
     demo(tmp_path)
     assert (tmp_path / "summary.json").read_bytes() == before
     for name in [

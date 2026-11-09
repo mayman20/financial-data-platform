@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 
 from fdp.ingestion import parse_prices, parse_rss
-from fdp.report import allocation_summary, pause_spans
+from fdp.report import allocation_summary, detection_rates, pause_spans
 from fdp.research import rebalancer_backtest, sentiment_price_flow
 from fdp.synthetic import planted_inputs
 from fdp.validation import validate_returns
@@ -31,26 +31,27 @@ def test_planted_timing_and_effect_size_are_exact():
     assert len(parse_rss(rss, "EQ")) == 200
 
 
-def test_fixed_primary_signal_reports_failure_honestly():
-    csv, rss, _ = planted_inputs()
+def test_illustrative_primary_uses_predeclared_20bp():
+    csv, rss, manifest = planted_inputs(effect_bps=20)
     flow = sentiment_price_flow(parse_prices(csv), parse_rss(rss, "EQ"), reset_every=5)
     result = validate_returns(flow["return"])
-    assert not result["passes_all_gates"]
-    assert not result["gates"]["sign_randomization_p_below_005"]
+    assert manifest["seed"] == 43 and manifest["conditional_effect_bps"] == 20
+    assert isinstance(result["passes_all_gates"], bool)
     assert flow.guard_reset.sum() == 1039
 
 
 def test_power_ledger_has_both_gate_directions_and_reproduces_first_seed():
     ledger = json.loads(files("fdp").joinpath("fixtures/detection_power.json").read_text())
-    assert [row["seed"] for row in ledger["runs"]] == list(range(100, 120))
-    assert 0 < ledger["detections"] < ledger["trials"] == 20
-    assert ledger["detections"] == sum(all(row["gates"].values()) for row in ledger["runs"])
+    effect = ledger["effects"][2]
+    assert [row["seed"] for row in effect["runs"]] == list(range(100, 120))
+    assert 0 < effect["detections"] < effect["trials"] == 20
+    assert effect["detections"] == sum(all(row["gates"].values()) for row in effect["runs"])
     spec = importlib.util.spec_from_file_location(
         "power", Path(__file__).resolve().parents[1] / "scripts/detection_power.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    assert module.evaluate([100])["runs"] == ledger["runs"][:1]
+    assert module.evaluate([100])["runs"] == effect["runs"][:1]
 
 
 def test_demo_reset_does_not_change_library_default():
@@ -86,3 +87,51 @@ def test_allocation_diagnostics_are_measured_from_holdings():
             group.iloc[0][["weight_EQ", "weight_BOND", "weight_GOLD"]].astype(float),
             [0.5, 0.4, 0.1],
         )
+
+
+def test_detection_table_counts_all_runs_and_labels_zero_effect():
+    ledger = json.loads(files("fdp").joinpath("fixtures/detection_power.json").read_text())
+    rates = detection_rates(ledger)
+    assert [row["effect_bps"] for row in rates] == [0, 5, 10, 20, 40]
+    assert [row["detected"] for row in rates] == [0, 0, 12, 20, 20]
+    assert rates[0]["kind"] == "false-positive rate"
+    assert all(row["kind"] == "detection rate" for row in rates[1:])
+    for rate, effect in zip(rates, ledger["effects"], strict=True):
+        assert rate["trials"] == 20
+        assert rate["detected"] == sum(all(run["gates"].values()) for run in effect["runs"])
+
+
+@pytest.mark.parametrize("defect", ["seeds", "count", "noise", "effects", "gates", "trials"])
+def test_detection_table_rejects_incomparable_or_inconsistent_rows(defect):
+    ledger = json.loads(files("fdp").joinpath("fixtures/detection_power.json").read_text())
+    row = ledger["effects"][0]
+    if defect == "seeds":
+        row["runs"][0]["seed"] = 43
+    elif defect == "count":
+        row["detections"] += 1
+    elif defect == "noise":
+        row["design"]["innovation_sd_bps"] = 120
+    elif defect == "effects":
+        ledger["effects"].reverse()
+    elif defect == "gates":
+        row["runs"][0]["gates"].pop("positive_return")
+    else:
+        row["trials"] = 19
+    with pytest.raises(ValueError):
+        detection_rates(ledger)
+
+
+@pytest.mark.parametrize("effect_bps", [0, 5, 10, 20, 40])
+def test_effect_grid_preserves_paired_innovations_and_headlines(effect_bps):
+    csv, rss, manifest = planted_inputs(seed=100, periods=200, effect_bps=effect_bps)
+    zero_csv, zero_rss, _ = planted_inputs(seed=100, periods=200, effect_bps=0)
+    prices, zero = parse_prices(csv), parse_prices(zero_csv)
+    assert rss == zero_rss
+    news = parse_rss(rss, "EQ")
+    flow = sentiment_price_flow(zero, news, cost_rate=0)
+    # Lagged score at the previous close supplies the return's planted sign;
+    # use score, not held_position, because the guard must not affect generation.
+    signed_effect = np.sign(flow.lagged_score.shift(1).fillna(0)) * effect_bps / 10_000
+    actual_difference = prices.close.pct_change() - zero.close.pct_change()
+    np.testing.assert_allclose(actual_difference.iloc[1:], signed_effect.iloc[1:], atol=1e-14)
+    assert manifest["sessions"] == 200 and manifest["innovation_sd_bps"] == 60
