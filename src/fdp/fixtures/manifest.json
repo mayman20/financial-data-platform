@@ -1,0 +1,14 @@
+{
+  "kind": "synthetic",
+  "seed": 42,
+  "observations_per_asset": 260,
+  "symbols": [
+    "EQ",
+    "BOND",
+    "GOLD"
+  ],
+  "generator": "fdp.synthetic.generate_fixtures",
+  "price_process": "independent zero-drift Gaussian log increments",
+  "headline_process": "independent uniform choice; no relationship to prices",
+  "rights": "Generated for this repository; MIT license"
+}

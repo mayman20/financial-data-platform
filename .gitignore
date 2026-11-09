@@ -8,3 +8,14 @@ state/
 data/
 *.parquet
 *.db
+
+site/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.mplconfig/
+task_plan.md
+findings.md
+progress.md
