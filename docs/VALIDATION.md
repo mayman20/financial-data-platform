@@ -38,3 +38,18 @@ python shared/backtest_validation.py
 ```
 
 The example generates synthetic data locally. Its output demonstrates the report format and code path, not a trading result.
+
+## Packaged demo gates
+
+The installable pipeline uses a separate, documented subset at
+[`src/fdp/statistics.py`](../src/fdp/statistics.py), wrapped by
+[`src/fdp/validation.py`](../src/fdp/validation.py). It applies all four configured
+gates and rejects invalid inputs, instead of accepting missing checks. Its sign
+randomization uses a finite-sample +1 correction, and bootstrap drawdown includes
+initial equity. These corrections do not change the legacy file described above.
+The demo does not use the legacy walk-forward, regime or slippage helpers.
+
+`fdp demo` prints and publishes synthetic gate outcomes; a failed gate is a
+research rejection, not a build failure. Seeded positive/negative controls test
+gate behavior, separately from any claim that a strategy is valid. See
+[architecture](ARCHITECTURE.md) and [provenance](PROVENANCE.md) for assumptions.

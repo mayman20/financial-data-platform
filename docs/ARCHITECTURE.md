@@ -1,41 +1,70 @@
 # Architecture
 
-These notes describe historical design patterns from the broader private platform. The public repository contains the validation module and documentation, not the services themselves. Deployment topology and operational status are not asserted here.
+The installable `fdp` package is a synchronous offline research pipeline. It has
+no broker or order interface. Every demo run starts from bundled synthetic inputs.
 
-## Service boundaries
-
-The system used small Python services on Linux VMs. Ingestion, research, and paper execution were separate responsibilities.
-
-Cloud history, stated narrowly: the news/sentiment collector historically ran on a GCP Compute Engine VM with a weekday daily cron job, and that instance has since been deleted. AWS Lightsail was used for separate experiments; these notes do not claim the news service moved there, and nothing here shows a currently running deployment. The private news code had a lexicon/rules baseline plus optional Claude and FinBERT inference paths; which scorer the deployed version actually used is not recorded. The [ML experiments](../ml-experiments/) are separate. They were trained locally with NumPy, not on cloud infrastructure.
-
-Useful operational patterns included:
-
-- HTTP status endpoints for uptime, last processed events, and errors.
-- Append-only JSONL decision journals for diagnosis and restart reconciliation.
-- Error thresholds and circuit breakers to limit continued operation during failures.
-- Telegram alerts for service health and research events.
-
-These are architectural patterns, not a guarantee that every historical service implemented every protection. Journaling alone does not guarantee exactly-once execution; broker state and local state still require reconciliation.
-
-## Data sources
-
-Historical adapters covered IBKR, Alpaca, ccxt-connected exchanges, Chainlink feeds, and REST sources such as weather and news. They are not shipped in this repository. Rate limits, reconnect behavior, data freshness, and source licensing must be handled by each integration.
-
-## Storage choices
-
-| Data | Store | Purpose |
-|---|---|---|
-| Decision and event journals | JSONL | Append-only records for inspection and reconciliation |
-| Research datasets | Parquet | Columnar scans and cached historical data |
-| Structured service state | SQLite / PostgreSQL | Transactional records |
-| Operational summaries | Markdown / YAML | Human-readable status and configuration |
-
-## Research workflow
-
-```text
-idea → offline experiment → statistical checks → forward paper validation
+```mermaid
+flowchart TD
+    CLI[fdp demo / cli.py] --> FIX[Bundled fixtures + manifest]
+    FIX --> ING[ingestion.py: strict CSV / RSS parsing]
+    ING --> STORE[storage.py: SQLite snapshot]
+    STORE --> R[research.py: monthly rebalancer]
+    STORE --> S[research.py: lagged sentiment / price]
+    L[sentiment.py: lexicon + negation] --> S
+    B[circuit_breaker.py: in-memory loss guard] --> S
+    R --> V[validation.py + statistics.py]
+    S --> V
+    V --> REP[report.py: static HTML + PNG charts + JSON / CSV]
+    REP --> SITE[site/ ignored build output]
+    SITE --> PAGES[Pages workflow artifact]
+    LIVE[fdp fetch-news --allow-network] --> RSS[Public no-key RSS adapter]
+    RSS --> CSV[Separate user-requested CSV]
 ```
 
-Offline results can reject weak candidates; passing a statistical check does not establish executable performance. Forward validation must separately address fills, costs, stale data, and state recovery. Historical strategy backtests are not presented here as current paper-trading outcomes.
+## Boundaries and contracts
 
-See [Validation Methodology](VALIDATION.md) for the functions actually included in the public sample and their limitations. Production deployment and any use of capital are outside this repository.
+- **Ingestion:** rejects invalid schemas, nonfinite/nonpositive prices, duplicate
+  price keys, incomplete symbol panels, malformed RSS items and oversized feeds.
+  Publication times normalize to UTC. Headline deduplication uses normalized text,
+  source, symbol and UTC date. Failure propagates instead of silently skipping rows.
+- **Storage:** a SQLite transaction replaces both input tables together. Primary
+  keys reject duplicates; readers use read-only connections and deterministic order.
+  Demo inputs are read back from storage before either research flow runs.
+- **Rebalancer:** long-only fractional-share weights, fixed at 50/40/10 over EQ,
+  BOND and GOLD. Rebalances at each month's first observed close. Proportional
+  fees are reserved by solving for investable capital before trades are applied.
+- **Sentiment flow:** weighted rules score headlines, independent of the ML
+  experiments. Prior-calendar-day news determines exposure at today's close;
+  that position earns the next interval's return. The loss guard sees completed
+  intervals, including their preceding close's cost. No automatic cooldown/reset.
+- **Validation:** positive compounded return, sign-randomization p-value below
+  0.05, deflated Sharpe probability above 0.95 and bootstrap terminal-equity fifth
+  percentile above 0.8. All four must pass; invalid inputs raise. Gate failure is
+  normal research output and does not fail the demo command. No gate is optional.
+- **Report:** Matplotlib's noninteractive backend writes two PNGs. HTML escapes
+  dynamic labels and uses inline CSS and local images. JSON rejects nonfinite
+  values. CSVs expose per-bar returns, costs, positions and breaker state.
+- **Network:** only `fetch-news --allow-network` can invoke the public adapter.
+  The demo never uses downloaded content; tests replace sockets with failures.
+  Optional adapter tests use fake responses. No credentials or keyed sources.
+
+`site/` contains `index.html`, two PNGs, `summary.json`, two flow CSVs and
+`research.sqlite`. The Pages workflow removes the SQLite working snapshot before
+uploading the report artifact. Generated output stays out of Git. CI runs Python
+3.11 and 3.12, lint, tests and the demo; Pages deployment requires the coordinator
+to enable GitHub Actions as the repository's Pages source.
+
+## Research limits
+
+This is one fixed synthetic engineering example, with simplified transaction
+costs, end-of-sample mark-to-market and no realistic fill, liquidity, dividend,
+tax or exchange-calendar model. It performs no parameter search or training and
+makes no out-of-sample strategy claim. Sign randomization assumes symmetry; a
+short block bootstrap does not capture all serial dependence. The trial count
+is explicitly two for this demo, not a claim about historical research breadth.
+Code correctness and statistical gate output are separate from strategy validity.
+
+The original [validation module](../shared/backtest_validation.py),
+[methodology notes](VALIDATION.md) and [ML experiments](../ml-experiments/) retain
+their existing paths. The packaged subset has documented behavioral corrections;
+see [provenance](PROVENANCE.md).
