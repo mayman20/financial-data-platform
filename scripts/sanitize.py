@@ -72,6 +72,15 @@ def scan_text(label: str, text: str) -> list[str]:
     return findings
 
 
+def scan_diff(label: str, diff: str) -> list[str]:
+    # Strip exactly one patch marker: + before a decorator is not an email local part.
+    # Scan added AND removed content, plus hunk/file metadata.
+    content = "\n".join(
+        line[1:] if line.startswith(("+", "-", " ")) else line for line in diff.splitlines()
+    )
+    return scan_text(label, content)
+
+
 def run(base: str) -> int:
     root = Path(git("rev-parse", "--show-toplevel").decode().strip())
     tracked = {p for p in git("ls-files", "-z").decode().split("\0") if p}
@@ -133,7 +142,7 @@ def run(base: str) -> int:
             if exists and int(git("cat-file", "-s", f"{commit}:{name}")) > 1_000_000:
                 findings.append(f"commit {commit[:12]}: committed file exceeds 1 MB")
         diff = git("diff-tree", "--root", "-p", "--no-ext-diff", "--no-commit-id", commit).decode()
-        findings.extend(scan_text(f"commit {commit[:12]}", diff))
+        findings.extend(scan_diff(f"commit {commit[:12]}", diff))
     for finding in findings:
         print(finding)
     print(

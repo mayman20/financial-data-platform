@@ -37,3 +37,10 @@ def test_sensitive_constructed_values_are_redacted(sample, category):
 
 def test_python_slice_is_not_an_ip_address():
     assert sanitize.scan_text("fixture", "again = train[::-1]") == []
+
+
+def test_diff_decorators_are_not_emails_but_real_emails_still_flag():
+    assert sanitize.scan_diff("fixture", "+" + "@" + "pytest.fixture") == []
+    sample = "person" + "@" + "example.invalid"
+    assert sanitize.scan_diff("fixture", "+" + sample) == ["fixture:1: email"]
+    assert sanitize.scan_diff("fixture", "-" + sample) == ["fixture:1: email"]
