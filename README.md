@@ -1,9 +1,9 @@
 # Financial Data Platform
 
 An installable Python research pipeline: ingest local market-shaped data, store
-it in SQLite, run two research flows, apply statistical gates, and build a static
+it in SQLite, exercise synthetic signal detection and allocation, and build a static
 report. The default demo is deterministic and entirely offline, using bundled
-synthetic prices and fictional headlines. It has no broker or account integration.
+noise fixtures and a seeded planted-signal generator. It has no broker or account integration.
 
 ## Quickstart
 
@@ -26,15 +26,25 @@ Use `fdp demo --output another-folder` to select a different output directory.
 - SQLite input snapshot, read back before research runs.
 - Monthly 50/40/10 rebalancer with fractional holdings and funded transaction costs.
 - Lexicon sentiment → delayed long/cash exposure, with a session loss circuit breaker.
-- Four validation gates per flow: positive return, sign randomization, deflated
+- A fixed planted-signal case: conditional ±10 bp, independent 60 bp noise, 5,200
+  sessions and 5 bp exposure-change costs. It is a detection experiment, not a forecast.
+  A reproducible 20-seed ledger reports detection frequency; seed 43 is not detected.
+- Demo guards explicitly reset every five observed sessions; orange chart spans label
+  paused cash exposure. The library retains its explicit-reset default.
+- Four validation gates per sentiment case: positive return, sign randomization, deflated
   Sharpe and bootstrap downside. **FAIL is expected research output**, not a
   pipeline error or a claim about real markets.
-- `site/index.html`, `equity.png`, `exposure.png`, `summary.json`,
-  `rebalancer.csv`, `sentiment.csv`, and `research.sqlite`. Output is ignored by Git.
+- `site/index.html`, `equity.png`, `allocation.png`, `summary.json`,
+  `rebalancer.csv`, `sentiment.csv`, `planted.csv`, and two SQLite snapshots.
+  `allocation.png` shows actual versus target weights and drift; `equity.png`
+  shows the two sentiment cases. Output is ignored by Git.
 
 The [Pages workflow](.github/workflows/pages.yml) builds the same synthetic report
-on pushes to `main`. The coordinator must enable Pages with GitHub Actions before
-it can deploy. No live deployment is asserted by this README.
+on pushes to `main`. Deployment uses GitHub Actions as the Pages source. No live deployment is asserted here.
+
+The rebalancer is evaluated by allocation weights, maximum drift, turnover and costs,
+not profitability gates. Its returns remain synthetic. Regenerate the fixed power
+ledger with `.venv/bin/python scripts/detection_power.py`; no parameter search runs.
 
 ## Architecture
 

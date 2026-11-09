@@ -49,6 +49,11 @@ randomization uses a finite-sample +1 correction, and bootstrap drawdown include
 initial equity. These corrections do not change the legacy file described above.
 The demo does not use the legacy walk-forward, regime or slippage helpers.
 
+`fdp demo` applies these gates to the planted and noise sentiment cases only.
+The rebalancer reports allocation diagnostics instead. The fixed planted signal
+need not pass on every seed: the report discloses its effect, costs, primary-seed
+failure and empirical detection frequency across predeclared seeds 100–119.
+
 `fdp demo` prints and publishes synthetic gate outcomes; a failed gate is a
 research rejection, not a build failure. Seeded positive/negative controls test
 gate behavior, separately from any claim that a strategy is valid. See

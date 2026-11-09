@@ -24,7 +24,8 @@ uses the ported heuristic, not either ML experiment's classifier. It uses only
 headlines from a completed UTC calendar day before deciding exposure at a later
 close, then earns returns over the following interval. Its breaker counts each
 held interval's PnL net of the preceding close's cost, in starting-capital units.
-There is no automatic breaker reset during the backtest. End-of-sample holdings
+The library retains explicit-reset behavior. Demo callers explicitly reset every
+five observed sessions, exporting the resets and shaded pause spans. End-of-sample holdings
 are marked to market; no terminal liquidation is simulated.
 
 ## Bundled data
@@ -39,6 +40,14 @@ model or dataset is needed for `fdp demo`.
 Optional RSS downloads are user-triggered, transient provider content. They are
 not included in the demo, tested with live requests, bundled or automatically
 published. Public availability does not imply unrestricted redistribution.
+
+A new synthetic positive-control generator, `planted_inputs`, adds conditional
+±10 bp effects after prior-day headlines with independent 60 bp noise. Its
+5,200-session design, seed 43, 5 bp costs and five-session demo reset policy
+were fixed before evaluation. Primary detection failed; neither the effect nor
+seed was changed to force a pass. `scripts/detection_power.py` records the
+all-gate results of predeclared seeds 100–119 in the bundled JSON ledger.
+These synthetic records contain no private performance data.
 
 ## Preserved experiments and private boundaries
 
