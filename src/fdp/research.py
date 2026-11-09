@@ -93,21 +93,44 @@ def rebalancer_backtest(prices: pd.DataFrame, cost_rate: float = 0.0005) -> pd.D
                 turnover += abs(trade.value_delta)
             month = date.to_period("M")
         value = cash + sum(shares[s] * row[s] for s in weights)
-        rows.append((date, value / previous - 1, value, turnover, cost))
+        actual = {s: shares[s] * row[s] / value for s in weights}
+        drift = max(abs(actual[s] - weights[s]) for s in weights)
+        rows.append((date, value / previous - 1, value, turnover, cost, *actual.values(), drift))
         previous = value
-    return pd.DataFrame(rows, columns=["date", "return", "equity", "turnover", "cost"])
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "date",
+            "return",
+            "equity",
+            "turnover",
+            "cost",
+            "weight_EQ",
+            "weight_BOND",
+            "weight_GOLD",
+            "max_drift",
+        ],
+    )
 
 
 def sentiment_price_flow(
-    prices: pd.DataFrame, news: pd.DataFrame, cost_rate: float = 0.0005
+    prices: pd.DataFrame,
+    news: pd.DataFrame,
+    cost_rate: float = 0.0005,
+    *,
+    reset_every: int | None = None,
 ) -> pd.DataFrame:
     """Prior-day UTC news determines the position at today's close.
 
     A full calendar-day lag conservatively excludes the trading day's headlines.
-    Loss breaker persists until explicit reset (end of this run).
+    Default loss breaker persists until explicit reset (end of this run).
+    Optional reset_every explicitly resets after completed intervals every N sessions;
+    the demo uses five, while library callers retain the persistent default.
     """
     if not np.isfinite(cost_rate) or not 0 <= cost_rate < 1:
         raise ValueError("Invalid cost rate")
+    if reset_every is not None and (not isinstance(reset_every, int) or reset_every < 1):
+        raise ValueError("Positive session reset interval required")
     bars = prices[prices["symbol"] == "EQ"].sort_values("date")
     scores = news[news["symbol"] == "EQ"].copy()
     scores["date"] = (
@@ -119,19 +142,26 @@ def sentiment_price_flow(
     breaker = CircuitBreaker()
     last_price, position, equity, pending_cost = None, 0.0, 1.0, 0.0
     rows = []
-    for date, close in bars[["date", "close"]].itertuples(index=False, name=None):
+    for session, (date, close) in enumerate(
+        bars[["date", "close"]].itertuples(index=False, name=None)
+    ):
         lagged = score_by_date.get(pd.Timestamp(date).date() - timedelta(days=1), 0.0)
         held = position
         gross = held * (close / last_price - 1) if last_price is not None else 0.0
         # Realize the held interval before choosing exposure for the next one.
         # The guard counts net PnL including the previous close's trading cost.
         breaker.record_result(equity * gross - pending_cost)
+        reset = reset_every is not None and session > 0 and session % reset_every == 0
+        if reset:
+            breaker.reset()
         target = float(lagged > 0 and breaker.allow_trade())
         cost = abs(target - held) * cost_rate
         ret = (1 + gross) * (1 - cost) - 1
         pending_cost = equity * (1 + gross) * cost
         equity *= 1 + ret
-        rows.append((date, ret, equity, target, held, lagged, cost, not breaker.allow_trade()))
+        rows.append(
+            (date, ret, equity, target, held, lagged, cost, not breaker.allow_trade(), reset)
+        )
         position, last_price = target, close
     return pd.DataFrame(
         rows,
@@ -144,5 +174,6 @@ def sentiment_price_flow(
             "lagged_score",
             "cost",
             "paused",
+            "guard_reset",
         ],
     )

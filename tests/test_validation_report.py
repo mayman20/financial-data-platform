@@ -50,19 +50,31 @@ def test_fixtures_reproduce_byte_for_byte(tmp_path):
 
 def test_end_to_end_report_and_repeated_run(tmp_path):
     checks = demo(tmp_path)
-    assert set(checks) == {"Rebalancer", "Sentiment / price"}
+    assert set(checks) == {"Pure noise", "Planted signal"}
     page = (tmp_path / "index.html").read_text()
     assert "All results are synthetic" in page
     assert "<script" not in page
     assert "http" not in page
-    for name in ["equity.png", "exposure.png"]:
+    for name in ["equity.png", "allocation.png"]:
         assert (tmp_path / name).read_bytes().startswith(b"\x89PNG\r\n\x1a\n")
         assert f'src="{name}"' in page
     before = (tmp_path / "summary.json").read_bytes()
-    assert json.loads(before)["rows"] == {"prices": 780, "news": 260}
+    summary = json.loads(before)
+    assert summary["rows"] == {"prices": 780, "news": 260}
+    assert summary["summary"]["Pure noise"] == "rejected"
+    assert "12/20" in summary["summary"]["Planted signal"]
+    assert "seed 43 not detected" in page
+    assert "Rebalancer" not in summary["validation"]
+    assert page.index('aria-label="Demo summary"') < page.index("All results are synthetic")
     demo(tmp_path)
     assert (tmp_path / "summary.json").read_bytes() == before
-    for name in ["rebalancer.csv", "sentiment.csv", "research.sqlite"]:
+    for name in [
+        "rebalancer.csv",
+        "sentiment.csv",
+        "planted.csv",
+        "research.sqlite",
+        "planted.sqlite",
+    ]:
         assert (tmp_path / name).stat().st_size > 0
 
 

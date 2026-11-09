@@ -22,7 +22,7 @@ jobs:
         env:
           MPLCONFIGDIR: ${{ runner.temp }}/matplotlib
       - name: Publish report artifacts only
-        run: rm site/research.sqlite
+        run: rm site/*.sqlite
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -9,6 +9,7 @@ from .ingestion import fetch_public_rss, parse_prices, parse_rss
 from .report import write_report
 from .research import rebalancer_backtest, sentiment_price_flow
 from .storage import read_snapshot, write_snapshot
+from .synthetic import planted_inputs
 from .validation import validate_returns
 
 
@@ -20,11 +21,22 @@ def demo(output: Path) -> dict:
     output.mkdir(parents=True, exist_ok=True)
     write_snapshot(output / "research.sqlite", prices, news)
     prices, news = read_snapshot(output / "research.sqlite")
+    csv, rss, planted_manifest = planted_inputs()
+    planted_prices, planted_news = parse_prices(csv), parse_rss(rss, "EQ", "planted")
+    write_snapshot(output / "planted.sqlite", planted_prices, planted_news)
+    planted_prices, planted_news = read_snapshot(output / "planted.sqlite")
     flows = {
         "Rebalancer": rebalancer_backtest(prices),
-        "Sentiment / price": sentiment_price_flow(prices, news),
+        "Pure noise": sentiment_price_flow(prices, news, reset_every=5),
+        "Planted signal": sentiment_price_flow(planted_prices, planted_news, reset_every=5),
     }
-    checks = {name: validate_returns(frame["return"].to_numpy()) for name, frame in flows.items()}
+    manifest["planted"] = planted_manifest
+    manifest["detection_power"] = json.loads(fixture.joinpath("detection_power.json").read_text())
+    checks = {
+        name: validate_returns(frame["return"].to_numpy())
+        for name, frame in flows.items()
+        if name != "Rebalancer"
+    }
     write_report(output, flows, checks, manifest, {"prices": len(prices), "news": len(news)})
     return checks
 
@@ -44,10 +56,11 @@ def main(argv=None) -> int:
     live.add_argument("--output", type=Path, default=Path("site/public-news.csv"))
     args = parser.parse_args(argv)
     if args.command == "demo":
-        checks = demo(args.output)
+        demo(args.output)
         print(f"Synthetic report: {args.output / 'index.html'}")
-        for name, result in checks.items():
-            print(f"{name}: {'PASS' if result['passes_all_gates'] else 'FAIL'} research gates")
+        summary = json.loads((args.output / "summary.json").read_text())
+        for name, outcome in summary["summary"].items():
+            print(f"{name}: {outcome}")
     else:
         if not args.allow_network:
             parser.error("fetch-news requires --allow-network")
